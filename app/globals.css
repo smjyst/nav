@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+/* ── NAV Design System ──────────────────────────────────────── */
+
+@theme inline {
+  /* Fonts */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* NAV Brand Colours */
+  --color-bull: #10b981;
+  --color-bull-dim: #064e3b;
+  --color-bear: #ef4444;
+  --color-bear-dim: #7f1d1d;
+  --color-neutral: #6b7280;
+  --color-accent: #6366f1;
+  --color-accent-dim: #312e81;
+
+  /* Backgrounds */
+  --color-bg-primary: #0a0a0a;
+  --color-bg-card: #141414;
+  --color-bg-elevated: #1c1c1c;
+  --color-bg-overlay: #0a0a0aCC;
+
+  /* Borders */
+  --color-border: #2a2a2a;
+  --color-border-subtle: #1f1f1f;
+  --color-border-bright: #3f3f3f;
+
+  /* Text */
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #4b5563;
+  --color-text-link: #818cf8;
+
+  /* Semantic mappings for Tailwind utilities */
+  --color-background: var(--color-bg-primary);
+  --color-foreground: var(--color-text-primary);
+
+  /* Border radius */
+  --radius-card: 12px;
+  --radius-badge: 6px;
+}
+
+/* ── Base Styles ────────────────────────────────────────────── */
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background-color: #0a0a0a;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a #0a0a0a;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f3f;
+}
+
+/* ── Focus Styles ───────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* ── Conviction Gauge Animation ─────────────────────────────── */
+
+@keyframes gauge-fill {
+  from { stroke-dashoffset: var(--gauge-circumference); }
+  to   { stroke-dashoffset: var(--gauge-offset); }
+}
+
+.gauge-arc {
+  animation: gauge-fill 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ── Copilot Typing Cursor ──────────────────────────────────── */
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: currentColor;
+  margin-left: 1px;
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+/* ── Conviction Score Colors ────────────────────────────────── */
+
+.conviction-bull  { color: #10b981; }
+.conviction-bear  { color: #ef4444; }
+.conviction-neutral { color: #6b7280; }
+
+.conviction-bull-bg  { background-color: #064e3b; }
+.conviction-bear-bg  { background-color: #7f1d1d; }
+.conviction-neutral-bg { background-color: #1f2937; }
