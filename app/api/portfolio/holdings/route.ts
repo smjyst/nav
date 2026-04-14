@@ -60,7 +60,10 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
+  let body
+  try { body = await req.json() } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
   const parsed = AddHoldingSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
@@ -100,9 +103,9 @@ export async function POST(req: NextRequest) {
     const totalQty = oldQty + newQty
     const oldPrice = existing.average_buy_price ?? 0
     const newPrice = parsed.data.average_buy_price ?? 0
-    const avgPrice = oldPrice && newPrice
+    const avgPrice = oldPrice != null && oldPrice > 0 && newPrice != null && newPrice > 0 && totalQty > 0
       ? (oldPrice * oldQty + newPrice * newQty) / totalQty
-      : newPrice || oldPrice || null
+      : newPrice ?? oldPrice ?? null
 
     const { data: updated, error } = await supabase
       .from('holdings')
@@ -138,10 +141,24 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
+  let body
+  try { body = await req.json() } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
   const parsed = UpdateHoldingSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+
+  // Verify the holding belongs to this user's portfolio
+  const { data: existing } = await supabase
+    .from('holdings')
+    .select('id, portfolios!inner(user_id)')
+    .eq('id', parsed.data.id)
+    .single()
+
+  if (!existing || (existing as unknown as { portfolios: { user_id: string } }).portfolios.user_id !== user.id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
   const update: { quantity?: number; average_buy_price?: number | null } = {}
@@ -165,10 +182,24 @@ export async function DELETE(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
+  let body
+  try { body = await req.json() } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
   const parsed = DeleteHoldingSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+
+  // Verify the holding belongs to this user's portfolio
+  const { data: existing } = await supabase
+    .from('holdings')
+    .select('id, portfolios!inner(user_id)')
+    .eq('id', parsed.data.id)
+    .single()
+
+  if (!existing || (existing as unknown as { portfolios: { user_id: string } }).portfolios.user_id !== user.id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
   const { error } = await supabase

@@ -1,13 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
-import { getTopCoins } from '@/lib/api/coingecko'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
 // POST — Check for conviction changes and generate alerts
-// Called after conviction scores are refreshed
-export async function POST() {
+// Called by cron/Edge Functions — requires CRON_SECRET auth
+export async function POST(req: NextRequest) {
+  const authHeader = req.headers.get('authorization')
+  const expectedSecret = process.env.CRON_SECRET
+  if (!expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const supabase = await createClient()
 
   // Get all current conviction scores
@@ -79,7 +84,9 @@ export async function POST() {
 
       // Check if outlook changed recently (score extremes indicate strong signal)
       if (score.score >= 75 || score.score <= 25) {
-        const severity: AlertSeverity = score.score >= 80 || score.score <= 20 ? 'warning' : 'info'
+        const severity: AlertSeverity =
+          score.score >= 85 || score.score <= 15 ? 'critical' :
+          score.score >= 75 || score.score <= 25 ? 'warning' : 'info'
         const direction = score.outlook === 'bull' ? 'bullish' : score.outlook === 'bear' ? 'bearish' : 'neutral'
 
         alertEvents.push({
@@ -113,7 +120,11 @@ export async function POST() {
 
     if (existing && existing.length > 0) continue
 
-    await supabase.from('alert_events').insert(alert)
+    const { error: insertError } = await supabase.from('alert_events').insert(alert)
+    if (insertError) {
+      console.error('Failed to insert alert:', insertError)
+      continue
+    }
     inserted++
   }
 

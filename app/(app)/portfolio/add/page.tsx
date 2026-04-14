@@ -22,6 +22,7 @@ export default function AddHoldingPage() {
   const [buyPrice, setBuyPrice] = useState('')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -51,7 +52,13 @@ export default function AddHoldingPage() {
     e.preventDefault()
     if (!selected || !quantity) return
 
+    const qty = parseFloat(quantity)
+    const price = buyPrice ? parseFloat(buyPrice) : null
+    if (isNaN(qty) || qty <= 0) { setError('Quantity must be greater than zero'); return }
+    if (price !== null && (isNaN(price) || price <= 0)) { setError('Buy price must be greater than zero'); return }
+
     setSaving(true)
+    setError(null)
     try {
       const res = await fetch('/api/portfolio/holdings', {
         method: 'POST',
@@ -60,16 +67,20 @@ export default function AddHoldingPage() {
           coin_id: selected.id,
           symbol: selected.symbol,
           name: selected.name,
-          quantity: parseFloat(quantity),
-          average_buy_price: buyPrice ? parseFloat(buyPrice) : null,
+          quantity: qty,
+          average_buy_price: price,
         }),
       })
 
       if (res.ok) {
         setSuccess(true)
         setTimeout(() => router.push('/portfolio'), 800)
+      } else {
+        setError('Failed to add holding. Please try again.')
       }
-    } catch {} finally {
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
       setSaving(false)
     }
   }
@@ -158,6 +169,7 @@ export default function AddHoldingPage() {
             <input
               type="number"
               step="any"
+              min="0"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               placeholder="0.00"
@@ -174,6 +186,7 @@ export default function AddHoldingPage() {
             <input
               type="number"
               step="any"
+              min="0"
               value={buyPrice}
               onChange={(e) => setBuyPrice(e.target.value)}
               placeholder="0.00"
@@ -181,6 +194,10 @@ export default function AddHoldingPage() {
             />
             <p className="text-xs text-[#4b5563] mt-1">Used to calculate your profit & loss</p>
           </div>
+
+          {error && (
+            <p className="text-sm text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 rounded-xl px-4 py-2.5">{error}</p>
+          )}
 
           {/* Submit */}
           <button

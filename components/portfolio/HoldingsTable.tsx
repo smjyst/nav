@@ -95,8 +95,10 @@ export default function HoldingsTable({ holdings, onDelete, deleting }: Holdings
             {/* Delete */}
             <div className="flex justify-center">
               <button
-                onClick={() => onDelete(h.id)}
+                onClick={() => { if (confirm(`Remove ${h.name} from portfolio?`)) onDelete(h.id) }}
                 disabled={deleting === h.id}
+                aria-label={`Delete ${h.name}`}
+                title={`Delete ${h.name}`}
                 className="p-1.5 rounded-lg text-[#4b5563] hover:text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors disabled:opacity-40"
               >
                 <Trash2 size={14} />

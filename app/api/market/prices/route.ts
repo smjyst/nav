@@ -8,17 +8,25 @@ export async function GET(req: NextRequest) {
 
   // If specific IDs requested, return simple price map
   if (ids) {
-    const coinIds = ids.split(',').filter(Boolean)
+    const coinIds = ids.split(',').filter(Boolean).slice(0, 100)
     if (coinIds.length === 0) return NextResponse.json({})
-    const prices = await getPrices(coinIds)
-    return NextResponse.json(prices, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
-    })
+    try {
+      const prices = await getPrices(coinIds)
+      return NextResponse.json(prices, {
+        headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=15' },
+      })
+    } catch {
+      return NextResponse.json({ error: 'Price service unavailable' }, { status: 503 })
+    }
   }
 
   // Default: return top 100 coins
-  const coins = await getTopCoins(100)
-  return NextResponse.json(coins, {
-    headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
-  })
+  try {
+    const coins = await getTopCoins(100)
+    return NextResponse.json(coins, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
+    })
+  } catch {
+    return NextResponse.json({ error: 'Price service unavailable' }, { status: 503 })
+  }
 }

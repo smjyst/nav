@@ -83,7 +83,8 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const portfolioPnl24hPct = portfolioValue > 0 ? (portfolioPnl24h / (portfolioValue - portfolioPnl24h)) * 100 : 0
+  const prevValue = portfolioValue - portfolioPnl24h
+  const portfolioPnl24hPct = prevValue > 0 ? (portfolioPnl24h / prevValue) * 100 : 0
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -116,12 +117,18 @@ export async function POST(req: NextRequest) {
     riskProfile,
   })
 
-  const response = await anthropic.messages.create({
-    model: NAV_MODEL,
-    max_tokens: 800,
-    system: [NAV_PERSONA, BRIEFING_SYSTEM].join('\n\n'),
-    messages: [{ role: 'user', content: userContent }],
-  })
+  let response
+  try {
+    response = await anthropic.messages.create({
+      model: NAV_MODEL,
+      max_tokens: 800,
+      system: [NAV_PERSONA, BRIEFING_SYSTEM].join('\n\n'),
+      messages: [{ role: 'user', content: userContent }],
+    })
+  } catch (err) {
+    console.error('Claude API failed for briefing:', err)
+    return NextResponse.json({ error: 'Failed to generate briefing' }, { status: 503 })
+  }
 
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
   let briefingContent
