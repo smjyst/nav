@@ -2,9 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getTopCoins } from '@/lib/api/coingecko'
 import { getFearGreed, fearGreedColor } from '@/lib/api/alternative'
 import Link from 'next/link'
-import { ArrowRight, TrendingUp, Shield, Wallet, Sparkles } from 'lucide-react'
+import { ArrowRight, TrendingUp, Shield, Wallet, Activity, Bitcoin, CircleDollarSign, Briefcase } from 'lucide-react'
 import PriceChange from '@/components/shared/PriceChange'
 import { formatUsd } from '@/lib/utils/formatting'
+import CopilotCTA from './CopilotCTA'
 
 export const metadata = { title: 'Dashboard — NAV' }
 
@@ -43,50 +44,80 @@ export default async function DashboardPage() {
 
       {/* Quick stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {/* Fear & Greed */}
+        {/* Sentiment */}
         {fearGreed && (
-          <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-4">
-            <p className="text-xs text-[#6b7280] mb-2">Fear &amp; Greed</p>
-            <p
-              className="text-3xl font-bold tabular-nums"
-              style={{ color: fearGreedColor(fearGreed.value) }}
+          <div className="bg-[#141414]/80 backdrop-blur-sm border border-[#1f1f1f] rounded-2xl p-4 flex items-center gap-3.5">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: `${fearGreedColor(fearGreed.value)}15` }}
             >
-              {fearGreed.value}
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: fearGreedColor(fearGreed.value) }}>
-              {fearGreed.value_classification}
-            </p>
+              <Activity size={20} style={{ color: fearGreedColor(fearGreed.value) }} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wider text-[#6b7280] font-medium">Sentiment</p>
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className="text-lg font-bold tabular-nums leading-tight"
+                  style={{ color: fearGreedColor(fearGreed.value) }}
+                >
+                  {fearGreed.value}
+                </span>
+                <span className="text-[11px] text-[#6b7280]">/100</span>
+              </div>
+              <p
+                className="text-[11px] font-medium leading-tight"
+                style={{ color: fearGreedColor(fearGreed.value) }}
+              >
+                {fearGreed.value_classification}
+              </p>
+            </div>
           </div>
         )}
 
         {/* BTC */}
         {topCoins[0] && (
-          <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-4">
-            <p className="text-xs text-[#6b7280] mb-2">Bitcoin</p>
-            <p className="text-xl font-bold text-white tabular-nums">
-              {formatUsd(topCoins[0].current_price)}
-            </p>
-            <PriceChange pct={topCoins[0].price_change_percentage_24h} size="sm" showIcon />
+          <div className="bg-[#141414]/80 backdrop-blur-sm border border-[#1f1f1f] rounded-2xl p-4 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-[#f7931a]/10 flex items-center justify-center shrink-0">
+              <Bitcoin size={20} className="text-[#f7931a]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wider text-[#6b7280] font-medium">Bitcoin</p>
+              <p className="text-lg font-bold text-white tabular-nums leading-tight">
+                {formatUsd(topCoins[0].current_price)}
+              </p>
+              <PriceChange pct={topCoins[0].price_change_percentage_24h} size="sm" />
+            </div>
           </div>
         )}
 
         {/* ETH */}
         {topCoins[1] && (
-          <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-4">
-            <p className="text-xs text-[#6b7280] mb-2">Ethereum</p>
-            <p className="text-xl font-bold text-white tabular-nums">
-              {formatUsd(topCoins[1].current_price)}
-            </p>
-            <PriceChange pct={topCoins[1].price_change_percentage_24h} size="sm" showIcon />
+          <div className="bg-[#141414]/80 backdrop-blur-sm border border-[#1f1f1f] rounded-2xl p-4 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-[#627eea]/10 flex items-center justify-center shrink-0">
+              <CircleDollarSign size={20} className="text-[#627eea]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wider text-[#6b7280] font-medium">Ethereum</p>
+              <p className="text-lg font-bold text-white tabular-nums leading-tight">
+                {formatUsd(topCoins[1].current_price)}
+              </p>
+              <PriceChange pct={topCoins[1].price_change_percentage_24h} size="sm" />
+            </div>
           </div>
         )}
 
-        {/* Portfolio placeholder */}
-        <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-4">
-          <p className="text-xs text-[#6b7280] mb-2">My Portfolio</p>
-          <Link href="/portfolio" className="text-sm text-[#818cf8] hover:text-[#a5b4fc] transition-colors">
-            Set up portfolio →
-          </Link>
+        {/* Portfolio */}
+        <div className="bg-[#141414]/80 backdrop-blur-sm border border-[#1f1f1f] rounded-2xl p-4 flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-[#6366f1]/10 flex items-center justify-center shrink-0">
+            <Briefcase size={20} className="text-[#6366f1]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] uppercase tracking-wider text-[#6b7280] font-medium">Portfolio</p>
+            <Link href="/portfolio" className="text-sm font-semibold text-[#818cf8] hover:text-[#a5b4fc] transition-colors leading-tight block">
+              Set up →
+            </Link>
+            <p className="text-[11px] text-[#4b5563] leading-tight">Track your holdings</p>
+          </div>
         </div>
       </div>
 
@@ -175,23 +206,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Copilot CTA */}
-      <div className="bg-gradient-to-r from-[#312e81]/30 to-[#1e1b4b]/30 border border-[#6366f1]/20 rounded-xl p-5 flex items-center justify-between gap-4">
-        <div>
-          <h3 className="text-white font-semibold mb-1 flex items-center gap-2">
-            <Sparkles size={16} className="text-[#818cf8]" />
-            Ask NAV Copilot
-          </h3>
-          <p className="text-sm text-[#9ca3af]">
-            &ldquo;What should I do today?&rdquo; · &ldquo;Why is ETH down?&rdquo; · &ldquo;Is now a good time to buy Bitcoin?&rdquo;
-          </p>
-        </div>
-        <button
-          onClick={() => {/* opens via store */}}
-          className="flex-shrink-0 px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          Ask
-        </button>
-      </div>
+      <CopilotCTA />
     </div>
   )
 }

@@ -1,6 +1,5 @@
 import { streamText } from 'ai'
-import { anthropic as anthropicProvider } from '@ai-sdk/anthropic'
-import { NAV_MODEL } from '@/lib/claude/client'
+import { anthropicProvider, NAV_MODEL } from '@/lib/claude/client'
 import { NAV_PERSONA, buildMarketContext } from '@/lib/claude/prompts/system'
 import { COPILOT_SYSTEM, buildCopilotContext } from '@/lib/claude/prompts/copilot'
 import { getFearGreed } from '@/lib/api/alternative'

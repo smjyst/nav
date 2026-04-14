@@ -1,6 +1,5 @@
 import { streamText } from 'ai'
-import { anthropic as anthropicProvider } from '@ai-sdk/anthropic'
-import { NAV_MODEL } from '@/lib/claude/client'
+import { anthropicProvider, NAV_MODEL } from '@/lib/claude/client'
 import { NAV_PERSONA } from '@/lib/claude/prompts/system'
 import { WALLET_SYSTEM, WALLET_USER_TEMPLATE } from '@/lib/claude/prompts/wallet'
 import { isValidEthAddress, getTransactions, getEthBalance } from '@/lib/api/etherscan'

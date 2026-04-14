@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Newspaper, RefreshCw } from 'lucide-react'
+import GenerateBriefingButton from './GenerateBriefingButton'
 
 export const metadata = { title: 'Daily Briefing — NAV' }
 
@@ -41,6 +42,7 @@ export default async function BriefingPage() {
           <p className="text-sm text-[#6b7280] max-w-xs mx-auto">
             Your personalised briefing is generated each morning. Check back tomorrow, or trigger one manually below.
           </p>
+          <GenerateBriefingButton />
         </div>
       )}
     </div>
@@ -50,14 +52,25 @@ export default async function BriefingPage() {
 function BriefingContent({ content }: { content: Record<string, unknown> }) {
   const marketMood = content.market_mood as string
   const portfolioNote = content.portfolio_note as string
+  const topMovers = content.top_movers as Array<{ name: string; symbol: string; change: string; why: string }> | undefined
   const actionItems = content.action_items as string[]
   const learningBite = content.learning_bite as string
+  const riskLevel = content.risk_level as string | undefined
+  const emoji = content.summary_emoji as string | undefined
 
   return (
     <div className="space-y-4">
       {marketMood && (
         <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-5">
-          <p className="text-xs text-[#6b7280] font-medium uppercase tracking-wide mb-2">Market mood</p>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-xs text-[#6b7280] font-medium uppercase tracking-wide">Market mood</p>
+            {emoji && <span className="text-sm">{emoji}</span>}
+            {riskLevel && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskLevel === 'high' ? 'bg-[#ef4444]/10 text-[#ef4444]' : riskLevel === 'medium' ? 'bg-[#f59e0b]/10 text-[#f59e0b]' : 'bg-[#10b981]/10 text-[#10b981]'}`}>
+                {riskLevel} risk
+              </span>
+            )}
+          </div>
           <p className="text-sm text-[#e5e7eb] leading-relaxed">{marketMood}</p>
         </div>
       )}
@@ -67,13 +80,34 @@ function BriefingContent({ content }: { content: Record<string, unknown> }) {
           <p className="text-sm text-[#e5e7eb] leading-relaxed">{portfolioNote}</p>
         </div>
       )}
+      {topMovers && topMovers.length > 0 && (
+        <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-5">
+          <p className="text-xs text-[#6b7280] font-medium uppercase tracking-wide mb-3">Top movers</p>
+          <div className="space-y-2">
+            {topMovers.map((m, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-white font-medium">{m.symbol}</span>
+                  <span className="text-xs text-[#6b7280] ml-2">{m.name}</span>
+                </div>
+                <div className="text-right">
+                  <span className={`text-sm font-medium tabular-nums ${m.change.startsWith('-') ? 'text-[#ef4444]' : 'text-[#10b981]'}`}>
+                    {m.change}
+                  </span>
+                  {m.why && <p className="text-xs text-[#6b7280]">{m.why}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {actionItems?.length > 0 && (
         <div className="bg-[#141414] border border-[#1f1f1f] rounded-xl p-5">
           <p className="text-xs text-[#6b7280] font-medium uppercase tracking-wide mb-3">Suggested actions</p>
           <ul className="space-y-2">
             {actionItems.map((item, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-[#e5e7eb]">
-                <span className="text-[#6366f1] mt-0.5 flex-shrink-0">→</span>
+                <span className="text-[#6366f1] mt-0.5 flex-shrink-0">&rarr;</span>
                 {item}
               </li>
             ))}
