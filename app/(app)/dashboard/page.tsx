@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getTopCoins } from '@/lib/api/coingecko'
 import { getFearGreed, fearGreedColor } from '@/lib/api/alternative'
 import Link from 'next/link'
-import { ArrowRight, TrendingUp, Shield, Wallet, Activity, Bitcoin, CircleDollarSign, Briefcase } from 'lucide-react'
+import { ArrowRight, TrendingUp, TrendingDown, Shield, Wallet, Activity, Bitcoin, CircleDollarSign, Briefcase, Flame } from 'lucide-react'
 import PriceChange from '@/components/shared/PriceChange'
 import { formatUsd } from '@/lib/utils/formatting'
 import NewsTicker from './NewsTicker'
@@ -23,9 +23,15 @@ export default async function DashboardPage() {
       .single()
       .then((r) => r.data as ProfileRow | null),
     getFearGreed().catch(() => null),
-    getTopCoins(5).catch(() => []),
+    getTopCoins(50).catch(() => []),
   ])
   const profile = profileRaw
+
+  // Sort by absolute 24h change to find biggest movers
+  const biggestMovers = [...topCoins]
+    .filter((c) => c.price_change_percentage_24h != null)
+    .sort((a, b) => Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h))
+    .slice(0, 6)
 
   const firstName = profile?.display_name?.split(' ')[0] || 'there'
   const hour = new Date().getHours()
@@ -176,35 +182,47 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* Top movers */}
-      {topCoins.length > 0 && (
+      {/* Biggest Movers */}
+      {biggestMovers.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-white">Top Coins</h2>
+            <div className="flex items-center gap-2">
+              <Flame size={16} className="text-[#f59e0b]" />
+              <h2 className="text-base font-semibold text-white">Biggest Movers</h2>
+              <span className="text-[10px] text-[#6b7280] bg-[#1c1c1c] px-1.5 py-0.5 rounded-md">24h</span>
+            </div>
             <Link href="/markets" className="text-xs text-[#6b7280] hover:text-[#9ca3af] transition-colors">
               View all →
             </Link>
           </div>
           <div className="space-y-1.5">
-            {topCoins.map((coin) => (
-              <Link
-                key={coin.id}
-                href={`/markets/${coin.id}`}
-                className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#141414] border border-[#1f1f1f] hover:bg-[#1c1c1c] hover:border-[#2a2a2a] transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-[#4b5563] w-4">{coin.market_cap_rank}</span>
-                  <div>
-                    <p className="text-sm font-medium text-white">{coin.name}</p>
-                    <p className="text-xs text-[#6b7280] uppercase">{coin.symbol}</p>
+            {biggestMovers.map((coin) => {
+              const isUp = coin.price_change_percentage_24h >= 0
+              return (
+                <Link
+                  key={coin.id}
+                  href={`/markets/${coin.id}`}
+                  className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#141414] border border-[#1f1f1f] hover:bg-[#1c1c1c] hover:border-[#2a2a2a] transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isUp ? 'bg-[#10b981]/10' : 'bg-[#ef4444]/10'}`}>
+                      {isUp
+                        ? <TrendingUp size={14} className="text-[#10b981]" />
+                        : <TrendingDown size={14} className="text-[#ef4444]" />
+                      }
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{coin.name}</p>
+                      <p className="text-xs text-[#6b7280] uppercase">{coin.symbol}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-white tabular-nums">{formatUsd(coin.current_price)}</p>
-                  <PriceChange pct={coin.price_change_percentage_24h} size="sm" />
-                </div>
-              </Link>
-            ))}
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-white tabular-nums">{formatUsd(coin.current_price)}</p>
+                    <PriceChange pct={coin.price_change_percentage_24h} size="sm" />
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}

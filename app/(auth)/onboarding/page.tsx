@@ -95,11 +95,9 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4">
       {/* Logo */}
-      <div className="mb-10 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-[#6366f1] flex items-center justify-center">
-          <span className="text-white font-bold text-sm">N</span>
-        </div>
-        <span className="text-white font-bold text-xl">NAV</span>
+      <div className="mb-10">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/nav-logo-full.svg" alt="NAV" width={140} height={38} />
       </div>
 
       {/* Progress dots */}

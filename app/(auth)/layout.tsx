@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 
 export const metadata: Metadata = {
   title: 'NAV — Sign In',
@@ -9,11 +10,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#0a0a0a]">
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-[#6366f1] flex items-center justify-center">
-            <span className="text-white font-bold text-sm">N</span>
-          </div>
-          <span className="text-white font-bold text-xl tracking-tight">NAV</span>
+        <div className="mb-2">
+          <Image src="/nav-logo-full.svg" alt="NAV" width={160} height={44} priority />
         </div>
         <p className="text-[#6b7280] text-sm text-center">
           Navigate, Activate, Validate

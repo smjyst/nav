@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles, Send, MessageSquare, TrendingUp, Shield, Zap } from 'lucide-react'
+import { Send, MessageSquare, TrendingUp, Shield, Zap } from 'lucide-react'
 import { useCopilotStore } from '@/lib/stores/copilotStore'
 
 const QUICK_PROMPTS = [
@@ -32,7 +32,8 @@ export default function CopilotLauncher() {
       {/* Header */}
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-lg bg-[#6366f1]/15 flex items-center justify-center">
-          <Sparkles size={16} className="text-[#818cf8]" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/nav-icon-white.svg" alt="NAV" width={18} height={14} />
         </div>
         <div>
           <h3 className="text-sm font-semibold text-white">NAV Copilot</h3>

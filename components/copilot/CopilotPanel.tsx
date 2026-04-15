@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Send, Sparkles, Bot } from 'lucide-react'
+import { X, Send, Bot } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCopilotStore } from '@/lib/stores/copilotStore'
 import { useUserStore } from '@/lib/stores/userStore'
@@ -131,11 +131,10 @@ export default function CopilotPanel() {
             {/* Header */}
             <div className="h-14 flex items-center justify-between px-4 border-b border-[#1f1f1f] flex-shrink-0">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-[#6366f1] flex items-center justify-center">
-                  <Sparkles size={12} className="text-white" />
-                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/nav-icon-white.svg" alt="NAV" width={22} height={17} />
                 <div>
-                  <span className="text-white text-sm font-semibold">NAV Copilot</span>
+                  <span className="text-white text-sm font-semibold">Copilot</span>
                   {contextLabel && (
                     <span className="text-[#6b7280] text-xs ml-2">— {contextLabel}</span>
                   )}
@@ -189,16 +188,16 @@ export default function CopilotPanel() {
                   )}
                 >
                   {/* Avatar */}
-                  <div
-                    className={cn(
-                      'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold',
-                      m.role === 'user'
-                        ? 'bg-[#1c1c1c] text-[#9ca3af]'
-                        : 'bg-[#6366f1] text-white',
-                    )}
-                  >
-                    {m.role === 'user' ? 'U' : 'N'}
-                  </div>
+                  {m.role === 'user' ? (
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold bg-[#1c1c1c] text-[#9ca3af]">
+                      U
+                    </div>
+                  ) : (
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#6366f1]/15">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/nav-icon-white.svg" alt="NAV" width={16} height={13} />
+                    </div>
+                  )}
 
                   {/* Bubble */}
                   <div
