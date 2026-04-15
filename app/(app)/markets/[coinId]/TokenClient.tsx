@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useCompletion } from '@ai-sdk/react'
 import ConvictionCard from '@/components/conviction/ConvictionCard'
 import PriceChart from '@/components/conviction/PriceChart'
-import { useUserStore } from '@/lib/stores/userStore'
 import type { CoinDetail } from '@/lib/api/coingecko'
 import type { ConvictionOutlook, ConvictionConfidence } from '@/lib/supabase/types'
 
@@ -48,11 +46,6 @@ export default function TokenClient({ coin }: TokenClientProps) {
   const [result, setResult] = useState<AgentResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { guidanceMode } = useUserStore()
-
-  const { completion: explanation, complete: explain, isLoading: isExplaining } = useCompletion({
-    api: '/api/ai/explain',
-  })
 
   async function runAgent() {
     setLoading(true)
@@ -71,24 +64,6 @@ export default function TokenClient({ coin }: TokenClientProps) {
     } finally {
       setLoading(false)
     }
-  }
-
-  function handleExplain() {
-    if (!result) return
-    const c = result.conviction
-    explain('', {
-      body: {
-        coinName: coin.name,
-        symbol: coin.symbol,
-        score: c.score,
-        outlook: c.outlook,
-        headline: c.headline,
-        summary: c.summary,
-        bullCase: c.bull_case,
-        bearCase: c.bear_case,
-        guidanceMode,
-      },
-    })
   }
 
   // Not yet analysed — show the launch button
@@ -173,9 +148,8 @@ export default function TokenClient({ coin }: TokenClientProps) {
         summary={conviction.summary}
         bullCase={conviction.bull_case}
         bearCase={conviction.bear_case}
-        onExplain={handleExplain}
-        isExplaining={isExplaining}
-        explanation={explanation}
+        keyLevels={conviction.key_levels}
+        signalsUsed={conviction.signals_used}
       />
 
       {/* Signals used */}
