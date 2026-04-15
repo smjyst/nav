@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronRight } from 'lucide-react'
-import { useCompletion } from '@ai-sdk/react'
 import { useUserStore } from '@/lib/stores/userStore'
 import { cn } from '@/lib/utils/cn'
 import type { ConvictionOutlook, ConvictionConfidence } from '@/lib/supabase/types'
@@ -30,7 +29,7 @@ interface ExplainAssistantProps {
 interface QAPair {
   question: string
   answer: string
-  isStreaming: boolean
+  done: boolean
 }
 
 /** Generate smart follow-up questions from the conviction context */
@@ -38,7 +37,6 @@ function getFollowUps(c: ConvictionData): string[] {
   const name = c.coinName
   const questions: string[] = []
 
-  // Outlook-specific lead question
   if (c.score >= 65) {
     questions.push(`What's driving the bullish outlook for ${name}?`)
   } else if (c.score <= 35) {
@@ -47,114 +45,141 @@ function getFollowUps(c: ConvictionData): string[] {
     questions.push(`What's keeping ${name} in neutral territory?`)
   }
 
-  // Key levels question
   if (c.keyLevels?.support || c.keyLevels?.resistance) {
-    questions.push(`What do the support and resistance levels tell me?`)
+    questions.push('What do the support and resistance levels tell me?')
   } else {
-    questions.push(`What price levels should I keep an eye on?`)
+    questions.push('What price levels should I keep an eye on?')
   }
 
-  // Actionable question based on outlook
   if (c.outlook === 'bull') {
-    questions.push(`Is this a good entry point, or should I wait?`)
+    questions.push('Is this a good entry point, or should I wait?')
   } else if (c.outlook === 'bear') {
     questions.push(`Should I be concerned if I already hold ${name}?`)
   } else {
-    questions.push(`What would tip this into a clearer buy or sell signal?`)
+    questions.push('What would tip this into a clearer buy or sell signal?')
   }
 
   return questions
 }
 
+/** Stream a response from the explain API */
+async function streamExplain(
+  body: Record<string, unknown>,
+  onChunk: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch('/api/ai/explain', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  })
+
+  if (!res.ok || !res.body) {
+    onChunk('Something went wrong. Please try again.')
+    return
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const chunk = decoder.decode(value, { stream: true })
+    onChunk(chunk)
+  }
+}
+
 export default function ExplainAssistant({ conviction, onClose }: ExplainAssistantProps) {
   const { guidanceMode } = useUserStore()
-  const [history, setHistory] = useState<QAPair[]>([])
+  const [initialText, setInitialText] = useState('')
   const [initialDone, setInitialDone] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [history, setHistory] = useState<QAPair[]>([])
+  const [followUpLoading, setFollowUpLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const followUps = useMemo(() => getFollowUps(conviction), [conviction])
   const [usedQuestions, setUsedQuestions] = useState<Set<string>>(new Set())
 
-  // Initial explanation — auto-fires on mount
-  const {
-    completion: initialExplanation,
-    complete: triggerInitial,
-    isLoading: isInitialLoading,
-  } = useCompletion({ api: '/api/ai/explain' })
-
-  // Follow-up answers
-  const {
-    completion: followUpAnswer,
-    complete: triggerFollowUp,
-    isLoading: isFollowUpLoading,
-  } = useCompletion({ api: '/api/ai/explain' })
+  const baseBody = useMemo(
+    () => ({
+      coinName: conviction.coinName,
+      symbol: conviction.symbol,
+      score: conviction.score,
+      outlook: conviction.outlook,
+      headline: conviction.headline,
+      summary: conviction.summary,
+      bullCase: conviction.bullCase,
+      bearCase: conviction.bearCase,
+      guidanceMode,
+    }),
+    [conviction, guidanceMode],
+  )
 
   // Auto-trigger initial explanation on mount
   useEffect(() => {
-    triggerInitial('', {
-      body: {
-        coinName: conviction.coinName,
-        symbol: conviction.symbol,
-        score: conviction.score,
-        outlook: conviction.outlook,
-        headline: conviction.headline,
-        summary: conviction.summary,
-        bullCase: conviction.bullCase,
-        bearCase: conviction.bearCase,
-        guidanceMode,
-      },
-    })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    const controller = new AbortController()
+    abortRef.current = controller
 
-  // Mark initial as done when streaming finishes
-  useEffect(() => {
-    if (!isInitialLoading && initialExplanation && !initialDone) {
-      setInitialDone(true)
-    }
-  }, [isInitialLoading, initialExplanation, initialDone])
-
-  // When a follow-up finishes streaming, save it to history
-  useEffect(() => {
-    if (!isFollowUpLoading && followUpAnswer) {
-      setHistory((prev) => {
-        const updated = [...prev]
-        const last = updated[updated.length - 1]
-        if (last && last.isStreaming) {
-          updated[updated.length - 1] = { ...last, answer: followUpAnswer, isStreaming: false }
-        }
-        return updated
+    streamExplain(
+      baseBody,
+      (chunk) => setInitialText((prev) => prev + chunk),
+      controller.signal,
+    )
+      .then(() => {
+        setInitialDone(true)
+        setInitialLoading(false)
       })
-    }
-  }, [isFollowUpLoading, followUpAnswer])
+      .catch(() => {
+        setInitialLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [baseBody])
 
   // Scroll to bottom on new content
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [initialExplanation, followUpAnswer, history.length])
+  }, [initialText, history])
 
-  function handleFollowUp(question: string) {
-    if (isFollowUpLoading) return
-    setUsedQuestions((prev) => new Set(prev).add(question))
-    setHistory((prev) => [...prev, { question, answer: '', isStreaming: true }])
+  const handleFollowUp = useCallback(
+    async (question: string) => {
+      if (followUpLoading) return
+      setUsedQuestions((prev) => new Set(prev).add(question))
 
-    triggerFollowUp('', {
-      body: {
-        coinName: conviction.coinName,
-        symbol: conviction.symbol,
-        score: conviction.score,
-        outlook: conviction.outlook,
-        headline: conviction.headline,
-        summary: conviction.summary,
-        bullCase: conviction.bullCase,
-        bearCase: conviction.bearCase,
-        guidanceMode,
-        followUpQuestion: question,
-      },
-    })
-  }
+      const idx = history.length
+      setHistory((prev) => [...prev, { question, answer: '', done: false }])
+      setFollowUpLoading(true)
+
+      try {
+        await streamExplain(
+          { ...baseBody, followUpQuestion: question },
+          (chunk) => {
+            setHistory((prev) => {
+              const updated = [...prev]
+              updated[idx] = { ...updated[idx], answer: updated[idx].answer + chunk }
+              return updated
+            })
+          },
+        )
+      } finally {
+        setHistory((prev) => {
+          const updated = [...prev]
+          if (updated[idx]) updated[idx] = { ...updated[idx], done: true }
+          return updated
+        })
+        setFollowUpLoading(false)
+      }
+    },
+    [baseBody, followUpLoading, history.length],
+  )
 
   const availableFollowUps = followUps.filter((q) => !usedQuestions.has(q))
-  const showFollowUps = initialDone && !isFollowUpLoading && availableFollowUps.length > 0
+  const showFollowUps =
+    initialDone && !followUpLoading && availableFollowUps.length > 0 && history.every((h) => h.done)
 
   return (
     <motion.div
@@ -190,8 +215,8 @@ export default function ExplainAssistant({ conviction, onClose }: ExplainAssista
       <div ref={scrollRef} className="max-h-[400px] overflow-y-auto">
         <div className="px-4 py-4 space-y-4">
           {/* Initial explanation */}
-          <div className="text-sm text-[#d1d5db] leading-relaxed">
-            {initialExplanation || (
+          <div className="text-sm text-[#d1d5db] leading-relaxed whitespace-pre-wrap">
+            {initialText || (
               <span className="flex items-center gap-2 text-[#6b7280]">
                 <span className="flex gap-0.5">
                   {[0, 1, 2].map((i) => (
@@ -206,7 +231,7 @@ export default function ExplainAssistant({ conviction, onClose }: ExplainAssista
                 Thinking...
               </span>
             )}
-            {isInitialLoading && initialExplanation && (
+            {initialLoading && initialText && (
               <motion.span
                 className="inline-block w-0.5 h-3.5 bg-[#6366f1] ml-0.5 align-middle"
                 animate={{ opacity: [1, 0] }}
@@ -226,34 +251,28 @@ export default function ExplainAssistant({ conviction, onClose }: ExplainAssista
               </div>
 
               {/* Assistant answer */}
-              <div className="text-sm text-[#d1d5db] leading-relaxed">
-                {qa.isStreaming ? (
-                  <>
-                    {followUpAnswer || (
-                      <span className="flex items-center gap-2 text-[#6b7280]">
-                        <span className="flex gap-0.5">
-                          {[0, 1, 2].map((j) => (
-                            <motion.span
-                              key={j}
-                              className="w-1 h-1 rounded-full bg-[#6366f1]"
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ repeat: Infinity, duration: 1, delay: j * 0.2 }}
-                            />
-                          ))}
-                        </span>
-                        Thinking...
-                      </span>
-                    )}
-                    {followUpAnswer && isFollowUpLoading && (
-                      <motion.span
-                        className="inline-block w-0.5 h-3.5 bg-[#6366f1] ml-0.5 align-middle"
-                        animate={{ opacity: [1, 0] }}
-                        transition={{ repeat: Infinity, duration: 0.8 }}
-                      />
-                    )}
-                  </>
-                ) : (
-                  qa.answer
+              <div className="text-sm text-[#d1d5db] leading-relaxed whitespace-pre-wrap">
+                {qa.answer || (
+                  <span className="flex items-center gap-2 text-[#6b7280]">
+                    <span className="flex gap-0.5">
+                      {[0, 1, 2].map((j) => (
+                        <motion.span
+                          key={j}
+                          className="w-1 h-1 rounded-full bg-[#6366f1]"
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ repeat: Infinity, duration: 1, delay: j * 0.2 }}
+                        />
+                      ))}
+                    </span>
+                    Thinking...
+                  </span>
+                )}
+                {!qa.done && qa.answer && (
+                  <motion.span
+                    className="inline-block w-0.5 h-3.5 bg-[#6366f1] ml-0.5 align-middle"
+                    animate={{ opacity: [1, 0] }}
+                    transition={{ repeat: Infinity, duration: 0.8 }}
+                  />
                 )}
               </div>
             </div>
@@ -285,7 +304,10 @@ export default function ExplainAssistant({ conviction, onClose }: ExplainAssista
                     <span className="text-xs text-[#9ca3af] group-hover:text-white transition-colors">
                       {q}
                     </span>
-                    <ChevronRight size={12} className="text-[#4b5563] group-hover:text-[#6366f1] shrink-0 transition-colors" />
+                    <ChevronRight
+                      size={12}
+                      className="text-[#4b5563] group-hover:text-[#6366f1] shrink-0 transition-colors"
+                    />
                   </button>
                 ))}
               </div>

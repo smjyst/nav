@@ -1,25 +1,66 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Wallet, Search } from 'lucide-react'
-import { useCompletion } from '@ai-sdk/react'
+import { motion } from 'framer-motion'
 import { useUserStore } from '@/lib/stores/userStore'
 import { truncateAddress } from '@/lib/utils/formatting'
 
 export default function WalletClient() {
   const [address, setAddress] = useState('')
+  const [completion, setCompletion] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(false)
   const { guidanceMode } = useUserStore()
+  const abortRef = useRef<AbortController | null>(null)
 
-  const { completion, complete, isLoading, error } = useCompletion({
-    api: '/api/ai/wallet-analyze',
-  })
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      const trimmed = address.trim()
+      if (!trimmed || !/^0x[a-fA-F0-9]{40}$/.test(trimmed) || isLoading) return
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const trimmed = address.trim()
-    if (!trimmed || !/^0x[a-fA-F0-9]{40}$/.test(trimmed)) return
-    complete('', { body: { address: trimmed, chain: 'ethereum', guidanceMode } })
-  }
+      // Abort any in-flight request
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      setCompletion('')
+      setIsLoading(true)
+      setError(false)
+
+      try {
+        const res = await fetch('/api/ai/wallet-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: trimmed, chain: 'ethereum', guidanceMode }),
+          signal: controller.signal,
+        })
+
+        if (!res.ok || !res.body) {
+          setError(true)
+          setIsLoading(false)
+          return
+        }
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = decoder.decode(value, { stream: true })
+          setCompletion((prev) => prev + chunk)
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setError(true)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [address, guidanceMode, isLoading],
+  )
 
   const isValidAddress = /^0x[a-fA-F0-9]{40}$/.test(address.trim())
 
@@ -85,7 +126,13 @@ export default function WalletClient() {
           </div>
           <div className="text-sm text-[#e5e7eb] leading-relaxed whitespace-pre-wrap">
             {completion}
-            {isLoading && <span className="cursor-blink" />}
+            {isLoading && (
+              <motion.span
+                className="inline-block w-0.5 h-3.5 bg-[#6366f1] ml-0.5 align-middle"
+                animate={{ opacity: [1, 0] }}
+                transition={{ repeat: Infinity, duration: 0.8 }}
+              />
+            )}
           </div>
           <p className="text-xs text-[#4b5563] mt-4 border-t border-[#1f1f1f] pt-3">
             Analysis based on public blockchain data. Not financial advice.

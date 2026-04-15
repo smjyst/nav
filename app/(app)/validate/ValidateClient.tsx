@@ -1,25 +1,64 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Shield, Search, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
-import { useCompletion } from '@ai-sdk/react'
+import { motion } from 'framer-motion'
 import { useUserStore } from '@/lib/stores/userStore'
 
 export default function ValidateClient() {
   const [input, setInput] = useState('')
+  const [completion, setCompletion] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(false)
   const { guidanceMode } = useUserStore()
+  const abortRef = useRef<AbortController | null>(null)
 
-  const { completion, complete, isLoading, error } = useCompletion({
-    api: '/api/ai/validate',
-  })
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!input.trim() || isLoading) return
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!input.trim()) return
-    complete('', {
-      body: { input: input.trim(), guidanceMode },
-    })
-  }
+      // Abort any in-flight request
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      setCompletion('')
+      setIsLoading(true)
+      setError(false)
+
+      try {
+        const res = await fetch('/api/ai/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input: input.trim(), guidanceMode }),
+          signal: controller.signal,
+        })
+
+        if (!res.ok || !res.body) {
+          setError(true)
+          setIsLoading(false)
+          return
+        }
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = decoder.decode(value, { stream: true })
+          setCompletion((prev) => prev + chunk)
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setError(true)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [input, guidanceMode, isLoading],
+  )
 
   const isContract = /^0x[a-fA-F0-9]{40}$/.test(input.trim())
 
@@ -114,7 +153,13 @@ export default function ValidateClient() {
           </div>
           <div className="text-sm text-[#e5e7eb] leading-relaxed whitespace-pre-wrap">
             {completion}
-            {isLoading && <span className="cursor-blink" />}
+            {isLoading && (
+              <motion.span
+                className="inline-block w-0.5 h-3.5 bg-[#6366f1] ml-0.5 align-middle"
+                animate={{ opacity: [1, 0] }}
+                transition={{ repeat: Infinity, duration: 0.8 }}
+              />
+            )}
           </div>
           <p className="text-xs text-[#4b5563] mt-4 border-t border-[#1f1f1f] pt-3">
             This analysis is based on available data. Always do your own research. Not financial advice.
