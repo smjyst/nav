@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { ArrowRight, TrendingUp, Shield, Wallet, Activity, Bitcoin, CircleDollarSign, Briefcase } from 'lucide-react'
 import PriceChange from '@/components/shared/PriceChange'
 import { formatUsd } from '@/lib/utils/formatting'
-import CopilotCTA from './CopilotCTA'
+import NewsTicker from './NewsTicker'
+import CopilotLauncher from './CopilotLauncher'
 
 export const metadata = { title: 'Dashboard — NAV' }
 
@@ -41,6 +42,9 @@ export default async function DashboardPage() {
           Here&apos;s what&apos;s happening in the market
         </p>
       </div>
+
+      {/* Trending News */}
+      <NewsTicker />
 
       {/* Quick stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -205,8 +209,8 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Copilot CTA */}
-      <CopilotCTA />
+      {/* Copilot Launcher */}
+      <CopilotLauncher />
     </div>
   )
 }

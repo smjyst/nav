@@ -26,6 +26,15 @@ export default function CopilotPanel() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Auto-send when opened with a quick prompt (contextLabel)
+  const lastLabelRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (isOpen && contextLabel && contextLabel !== lastLabelRef.current && messages.length === 0) {
+      lastLabelRef.current = contextLabel
+      sendMessage(contextLabel)
+    }
+  }, [isOpen, contextLabel]) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading) return
 
