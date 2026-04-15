@@ -121,3 +121,36 @@ export async function searchCoins(query: string): Promise<Array<{ id: string; na
   )
   return res.coins.slice(0, 10)
 }
+
+// CoinGecko platform IDs for contract address lookup
+export const CG_PLATFORMS: Record<string, string> = {
+  ethereum: 'ethereum',
+  bsc: 'binance-smart-chain',
+  polygon: 'polygon-pos',
+  arbitrum: 'arbitrum-one',
+  optimism: 'optimistic-ethereum',
+  avalanche: 'avalanche',
+  base: 'base',
+  fantom: 'fantom',
+  solana: 'solana',
+}
+
+// Look up a coin by its contract address on a specific chain
+export async function getCoinByContract(
+  contractAddress: string,
+  platform: string = 'ethereum',
+): Promise<CoinDetail | null> {
+  const platformId = CG_PLATFORMS[platform] ?? platform
+  try {
+    return await cachedFetch(
+      `nav:contract-lookup:${platformId}:${contractAddress.toLowerCase()}`,
+      TTL.TOKEN_META,
+      () =>
+        cgFetch<CoinDetail>(
+          `/coins/${platformId}/contract/${contractAddress.toLowerCase()}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`,
+        ),
+    )
+  } catch {
+    return null
+  }
+}
