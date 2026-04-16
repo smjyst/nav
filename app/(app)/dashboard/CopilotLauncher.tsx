@@ -1,79 +1,154 @@
 'use client'
 
-import { useState } from 'react'
-import { Send, MessageSquare, TrendingUp, Shield, Zap } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { ArrowUp, Sparkles } from 'lucide-react'
 import { useCopilotStore } from '@/lib/stores/copilotStore'
 
-const QUICK_PROMPTS = [
-  { icon: TrendingUp, label: 'Market overview', prompt: "What's happening in the crypto market today?", color: '#10b981' },
-  { icon: Shield, label: 'Risk check', prompt: 'What are the biggest risks in the market right now?', color: '#f59e0b' },
-  { icon: Zap, label: 'Top opportunities', prompt: 'Which coins have the strongest momentum this week?', color: '#6366f1' },
-  { icon: MessageSquare, label: 'Portfolio advice', prompt: "What should I do with my portfolio today?", color: '#ec4899' },
+const SUGGESTIONS = [
+  "What's happening in the market today?",
+  'Which coins have the strongest momentum?',
+  'What are the biggest risks right now?',
+  'Should I be buying or waiting?',
+  'Break down Bitcoin for me',
+  'What should I do with my portfolio?',
 ]
 
 export default function CopilotLauncher() {
   const { open } = useCopilotStore()
   const [inputValue, setInputValue] = useState('')
+  const [isFocused, setIsFocused] = useState(false)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!inputValue.trim()) return
-    open({ type: 'general' })
-    // The copilot panel will open — the user can type there
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = '0'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }, [inputValue])
+
+  function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault()
+    const text = inputValue.trim()
+    if (!text) return
+    open({ type: 'general', label: text })
     setInputValue('')
   }
 
-  function handleQuickPrompt(prompt: string) {
+  function handleSuggestion(prompt: string) {
     open({ type: 'general', label: prompt })
   }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit()
+    }
+  }
+
+  // Pick 4 random suggestions on mount
+  const [chips] = useState(() => {
+    const shuffled = [...SUGGESTIONS].sort(() => Math.random() - 0.5)
+    return shuffled.slice(0, 4)
+  })
+
   return (
-    <div className="bg-gradient-to-br from-[#312e81]/20 via-[#1e1b4b]/20 to-[#141414] border border-[#6366f1]/15 rounded-2xl p-5 space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-[#6366f1]/15 flex items-center justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/nav-icon-white.svg" alt="NAV" width={18} height={14} />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-white">NAV Copilot</h3>
-          <p className="text-[11px] text-[#6b7280]">Your AI research partner</p>
-        </div>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+      className="relative"
+    >
+      {/* Glow backdrop */}
+      <div
+        className={`absolute -inset-px rounded-[20px] transition-opacity duration-500 ${
+          isFocused ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 50%, rgba(99,102,241,0.05) 100%)',
+          filter: 'blur(20px)',
+        }}
+      />
 
-      {/* Input bar */}
-      <form onSubmit={handleSubmit} className="relative">
-        <input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onFocus={() => open({ type: 'general' })}
-          placeholder="Ask anything about crypto..."
-          className="w-full bg-[#0a0a0a]/60 border border-[#2a2a2a] hover:border-[#6366f1]/30 focus:border-[#6366f1]/50 rounded-xl pl-4 pr-10 py-3 text-sm text-[#f9fafb] placeholder-[#4b5563] focus:outline-none transition-colors"
-        />
-        <button
-          type="submit"
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#4b5563] hover:text-[#6366f1] hover:bg-[#6366f1]/10 transition-colors"
-          aria-label="Send"
-        >
-          <Send size={14} />
-        </button>
-      </form>
-
-      {/* Quick prompts */}
-      <div className="grid grid-cols-2 gap-2">
-        {QUICK_PROMPTS.map((q) => (
-          <button
-            key={q.label}
-            onClick={() => handleQuickPrompt(q.prompt)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0a0a0a]/40 border border-[#1f1f1f] hover:border-[#2a2a2a] hover:bg-[#1c1c1c] transition-all text-left group"
-          >
-            <q.icon size={13} style={{ color: q.color }} className="shrink-0" />
-            <span className="text-xs text-[#9ca3af] group-hover:text-white transition-colors truncate">
-              {q.label}
+      <div
+        className={`relative rounded-[20px] border transition-all duration-300 ${
+          isFocused
+            ? 'border-[#6366f1]/40 bg-[#141414] shadow-lg shadow-[#6366f1]/5'
+            : 'border-[#1f1f1f] bg-[#141414]/80'
+        }`}
+      >
+        {/* Header */}
+        <div className="px-5 pt-5 pb-3">
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/nav-icon-white.svg" alt="" width={14} height={11} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">
+                NAV Copilot
+              </h3>
+            </div>
+            <span className="ml-auto flex items-center gap-1 text-[10px] text-[#6366f1]/60 bg-[#6366f1]/5 px-2 py-0.5 rounded-full">
+              <Sparkles size={9} />
+              AI-powered
             </span>
-          </button>
-        ))}
+          </div>
+        </div>
+
+        {/* Input area */}
+        <form onSubmit={handleSubmit} className="px-5 pb-3">
+          <div
+            className={`relative rounded-2xl border transition-all duration-200 ${
+              isFocused
+                ? 'border-[#6366f1]/30 bg-[#0a0a0a]'
+                : 'border-[#2a2a2a] bg-[#0a0a0a]/60 hover:border-[#3a3a3a]'
+            }`}
+          >
+            <textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask NAV anything about crypto..."
+              rows={1}
+              className="w-full resize-none bg-transparent pl-4 pr-12 py-3.5 text-sm text-[#f9fafb] placeholder-[#4b5563] focus:outline-none leading-relaxed"
+              style={{ minHeight: '48px', maxHeight: '120px' }}
+            />
+            <button
+              type="submit"
+              disabled={!inputValue.trim()}
+              className={`absolute right-2 bottom-2 p-2 rounded-xl transition-all duration-200 ${
+                inputValue.trim()
+                  ? 'bg-[#6366f1] text-white hover:bg-[#4f46e5] shadow-md shadow-[#6366f1]/20'
+                  : 'bg-[#1c1c1c] text-[#4b5563]'
+              }`}
+              aria-label="Send"
+            >
+              <ArrowUp size={14} />
+            </button>
+          </div>
+        </form>
+
+        {/* Suggestion chips */}
+        <div className="px-5 pb-4">
+          <div className="flex flex-wrap gap-1.5">
+            {chips.map((q) => (
+              <button
+                key={q}
+                onClick={() => handleSuggestion(q)}
+                className="px-3 py-1.5 text-[11px] rounded-full border border-[#2a2a2a] text-[#9ca3af] hover:text-white hover:border-[#6366f1]/30 hover:bg-[#6366f1]/5 transition-all duration-200"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

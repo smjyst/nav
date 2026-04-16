@@ -49,6 +49,9 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      {/* NAV Copilot — front and centre */}
+      <CopilotLauncher />
+
       {/* Trending News */}
       <NewsTicker />
 
@@ -227,8 +230,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Copilot Launcher */}
-      <CopilotLauncher />
     </div>
   )
 }
