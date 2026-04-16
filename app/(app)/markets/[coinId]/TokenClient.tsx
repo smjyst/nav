@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import ConvictionCard from '@/components/conviction/ConvictionCard'
-import PriceChart from '@/components/conviction/PriceChart'
 import type { CoinDetail } from '@/lib/api/coingecko'
 import type { ConvictionOutlook, ConvictionConfidence } from '@/lib/supabase/types'
 
@@ -127,15 +126,6 @@ export default function TokenClient({ coin }: TokenClientProps) {
 
   return (
     <div className="space-y-4">
-      {/* Price Chart */}
-      <PriceChart
-        prices7d={context.chart.prices7d}
-        prices30d={context.chart.prices30d}
-        currentPrice={context.coin.currentPrice}
-        support={conviction.key_levels?.support}
-        resistance={conviction.key_levels?.resistance}
-      />
-
       {/* Conviction Card */}
       <ConvictionCard
         coinId={coin.id}

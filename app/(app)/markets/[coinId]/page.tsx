@@ -1,6 +1,7 @@
-import { getCoinDetail } from '@/lib/api/coingecko'
+import { getCoinDetail, getOHLCV } from '@/lib/api/coingecko'
 import { notFound } from 'next/navigation'
 import TokenClient from './TokenClient'
+import TokenPriceChart from './TokenPriceChart'
 import { formatUsd, formatChange, formatLargeNumber } from '@/lib/utils/formatting'
 import PriceChange from '@/components/shared/PriceChange'
 import Image from 'next/image'
@@ -32,6 +33,15 @@ export default async function TokenPage({ params }: TokenPageProps) {
     notFound()
   }
 
+  // Fetch chart data server-side (parallel with page render)
+  const [ohlcv7d, ohlcv30d] = await Promise.all([
+    getOHLCV(coinId, 7).catch(() => []),
+    getOHLCV(coinId, 30).catch(() => []),
+  ])
+
+  const prices7d = ohlcv7d.map((p) => p.close)
+  const prices30d = ohlcv30d.map((p) => p.close)
+
   const md = coin.market_data
 
   return (
@@ -61,7 +71,9 @@ export default async function TokenPage({ params }: TokenPageProps) {
           <div className="flex items-baseline gap-3 mb-1">
             <h1 className="text-2xl font-bold text-white">{coin.name}</h1>
             <span className="text-[#6b7280] font-medium uppercase">{coin.symbol}</span>
-            <span className="text-xs text-[#4b5563]">#{coin.market_cap_rank}</span>
+            {coin.market_cap_rank && (
+              <span className="text-xs text-[#4b5563]">#{coin.market_cap_rank}</span>
+            )}
           </div>
           <div className="flex items-baseline gap-3">
             <span className="text-3xl font-bold text-white tabular-nums">
@@ -72,6 +84,17 @@ export default async function TokenPage({ params }: TokenPageProps) {
         </div>
       </div>
 
+      {/* Price Chart — always visible, no agent needed */}
+      {prices7d.length > 0 && (
+        <div className="mb-6">
+          <TokenPriceChart
+            prices7d={prices7d}
+            prices30d={prices30d}
+            currentPrice={md.current_price.usd}
+          />
+        </div>
+      )}
+
       {/* Key stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <StatCard label="Market Cap" value={`$${formatLargeNumber(md.market_cap.usd)}`} />
@@ -80,33 +103,29 @@ export default async function TokenPage({ params }: TokenPageProps) {
         <StatCard label="From ATH" value={formatChange(md.ath_change_percentage.usd)} color={md.ath_change_percentage.usd > -20 ? '#10b981' : md.ath_change_percentage.usd > -50 ? '#f59e0b' : '#ef4444'} />
       </div>
 
-      {/* AI Conviction + chart (client component) */}
-      <TokenClient coin={coin} />
-
-      {/* Description */}
+      {/* About — above NAV Signal */}
       {coin.description.en && (
-        <div className="mt-6 bg-[#141414] border border-[#1f1f1f] rounded-xl p-5">
+        <div className="mb-6 bg-[#141414] border border-[#1f1f1f] rounded-xl p-5">
           <h2 className="text-sm font-semibold text-white mb-3">About {coin.name}</h2>
           <p className="text-sm text-[#9ca3af] leading-relaxed line-clamp-4">
             {coin.description.en.replace(/<[^>]+>/g, '')}
           </p>
+          {coin.links?.homepage?.[0] && (
+            <a
+              href={coin.links.homepage[0]}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-[#6b7280] hover:text-[#9ca3af] transition-colors mt-3"
+            >
+              <ExternalLink size={12} />
+              Website
+            </a>
+          )}
         </div>
       )}
 
-      {/* Links */}
-      {coin.links?.homepage?.[0] && (
-        <div className="mt-4 flex gap-2">
-          <a
-            href={coin.links.homepage[0]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-[#6b7280] hover:text-[#9ca3af] transition-colors"
-          >
-            <ExternalLink size={12} />
-            Website
-          </a>
-        </div>
-      )}
+      {/* AI Conviction (client component) */}
+      <TokenClient coin={coin} />
     </div>
   )
 }
