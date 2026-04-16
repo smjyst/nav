@@ -55,7 +55,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
         Back to markets
       </Link>
 
-      {/* Header */}
+      {/* Header + NAV Signal trigger */}
       <div className="flex items-start gap-4 mb-6">
         {coin.image?.large && (
           <Image
@@ -84,6 +84,11 @@ export default async function TokenPage({ params }: TokenPageProps) {
         </div>
       </div>
 
+      {/* NAV Signal — prominent at the top */}
+      <div className="mb-6">
+        <TokenClient coin={coin} />
+      </div>
+
       {/* Price Chart — always visible, no agent needed */}
       {prices7d.length > 0 && (
         <div className="mb-6">
@@ -103,7 +108,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
         <StatCard label="From ATH" value={formatChange(md.ath_change_percentage.usd)} color={md.ath_change_percentage.usd > -20 ? '#10b981' : md.ath_change_percentage.usd > -50 ? '#f59e0b' : '#ef4444'} />
       </div>
 
-      {/* About — above NAV Signal */}
+      {/* About */}
       {coin.description.en && (
         <div className="mb-6 bg-[#141414] border border-[#1f1f1f] rounded-xl p-5">
           <h2 className="text-sm font-semibold text-white mb-3">About {coin.name}</h2>
@@ -123,9 +128,6 @@ export default async function TokenPage({ params }: TokenPageProps) {
           )}
         </div>
       )}
-
-      {/* AI Conviction (client component) */}
-      <TokenClient coin={coin} />
     </div>
   )
 }
