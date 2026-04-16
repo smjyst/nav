@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowUp, Sparkles } from 'lucide-react'
 import { useCopilotStore } from '@/lib/stores/copilotStore'
@@ -47,11 +47,18 @@ export default function CopilotLauncher() {
     }
   }
 
-  // Pick 4 random suggestions on mount
-  const [chips] = useState(() => {
-    const shuffled = [...SUGGESTIONS].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, 4)
-  })
+  // Show first 4 suggestions (deterministic — no Math.random to avoid hydration mismatch)
+  // Shuffle happens client-side after mount
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  const chips = useMemo(() => {
+    if (!mounted) return SUGGESTIONS.slice(0, 4)
+    // Rotate based on the current day so users see variety without hydration issues
+    const dayOffset = new Date().getDate() % SUGGESTIONS.length
+    const rotated = [...SUGGESTIONS.slice(dayOffset), ...SUGGESTIONS.slice(0, dayOffset)]
+    return rotated.slice(0, 4)
+  }, [mounted])
 
   return (
     <motion.div
