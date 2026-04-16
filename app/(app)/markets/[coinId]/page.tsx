@@ -84,12 +84,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
         </div>
       </div>
 
-      {/* NAV Signal — prominent at the top */}
-      <div className="mb-6">
-        <TokenClient coin={coin} />
-      </div>
-
-      {/* Price Chart — always visible, no agent needed */}
+      {/* Price Chart — always visible at the top */}
       {prices7d.length > 0 && (
         <div className="mb-6">
           <TokenPriceChart
@@ -99,6 +94,11 @@ export default async function TokenPage({ params }: TokenPageProps) {
           />
         </div>
       )}
+
+      {/* NAV Signal — analyse button + results */}
+      <div className="mb-6">
+        <TokenClient coin={coin} />
+      </div>
 
       {/* Key stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
