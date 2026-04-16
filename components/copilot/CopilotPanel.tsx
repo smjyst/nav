@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useCopilotStore } from '@/lib/stores/copilotStore'
 import { useUserStore } from '@/lib/stores/userStore'
 import { cn } from '@/lib/utils/cn'
+import MarkdownMessage from './MarkdownMessage'
 
 interface Message {
   id: string
@@ -202,15 +203,21 @@ export default function CopilotPanel() {
                   {/* Bubble */}
                   <div
                     className={cn(
-                      'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+                      'max-w-[85%] rounded-2xl px-4 py-3',
                       m.role === 'user'
                         ? 'bg-[#1c1c1c] text-[#f9fafb] rounded-tr-sm'
                         : 'bg-[#141414] text-[#e5e7eb] rounded-tl-sm border border-[#2a2a2a]',
                     )}
                   >
-                    {m.content || (
+                    {m.content ? (
+                      m.role === 'assistant' ? (
+                        <MarkdownMessage content={m.content} />
+                      ) : (
+                        <p className="text-sm leading-relaxed">{m.content}</p>
+                      )
+                    ) : (
                       isLoading && m.role === 'assistant' && (
-                        <span className="flex gap-1">
+                        <span className="flex gap-1 py-1">
                           {[0, 1, 2].map((i) => (
                             <motion.span
                               key={i}
